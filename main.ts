@@ -8,11 +8,19 @@
 // Locally, MAKEFUN_BOT_DIR and MAKEFUN_OUTPUT_DIR stand in for /bot and /output:
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const botDir = process.env.MAKEFUN_BOT_DIR ?? '/bot';
 const outputDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
+// Fail loudly here rather than at the gate if POST.json is missing or malformed.
+const postPath = join(botDir, 'POST.json');
+const post = JSON.parse(readFileSync(postPath, 'utf8')) as { url?: unknown };
+if (typeof post.url !== 'string' || !/^https:\/\/x\.com\/[^/]+\/status\/\d+$/.test(post.url)) {
+  console.error(`POST.json must name an X post address, got: ${JSON.stringify(post)}`);
+  process.exit(1);
+}
+
 mkdirSync(outputDir, { recursive: true });
-copyFileSync(join(botDir, 'POST.json'), join(outputDir, 'POST.json'));
+copyFileSync(postPath, join(outputDir, 'POST.json'));
